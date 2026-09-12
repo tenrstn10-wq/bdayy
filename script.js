@@ -1815,10 +1815,44 @@ async function requestUnlockAll(){
   document.getElementById('share-btn').onclick=async()=>{
     try{
       await ensureHtml2Canvas();
-      const c=await html2canvas(document.getElementById('hero'),{backgroundColor:null,scale:2,useCORS:true}),x=c.getContext('2d'),g=getComputedStyle(document.body),q=x.createLinearGradient(0,0,c.width,c.height);
-      q.addColorStop(0,g.getPropertyValue('--g4'));q.addColorStop(.5,g.getPropertyValue('--g2'));q.addColorStop(1,g.getPropertyValue('--g1'));
-      x.strokeStyle=q;x.lineWidth=6;x.strokeRect(8,8,c.width-16,c.height-16);
-      const a=document.createElement('a');a.download='melisa-birthday.png';a.href=c.toDataURL();a.click();
+      const c=await html2canvas(document.getElementById('hero'),{backgroundColor:null,scale:2,useCORS:true});
+      const g=getComputedStyle(document.body);
+      const colV=g.getPropertyValue('--void').trim(),colA=g.getPropertyValue('--abyss').trim(),colD=g.getPropertyValue('--depths').trim();
+      const colG4=g.getPropertyValue('--g4').trim(),colG2=g.getPropertyValue('--g2').trim(),colG1=g.getPropertyValue('--g1').trim();
+
+      // ── Kanvas final rasio 9:16 (format story/status) ──
+      const FW=1080, FH=1920;
+      const out=document.createElement('canvas'); out.width=FW; out.height=FH;
+      const ox=out.getContext('2d');
+
+      // Latar belakang: gradasi sesuai tema (bukan hitam polos) supaya bar samping tetap enak dilihat
+      const bg=ox.createLinearGradient(0,0,FW,FH);
+      bg.addColorStop(0,colV||'#000'); bg.addColorStop(.5,colA||colV||'#000'); bg.addColorStop(1,colD||colA||'#000');
+      ox.fillStyle=bg; ox.fillRect(0,0,FW,FH);
+
+      // Versi blur/zoom dari hero sebagai isian bar kiri-kanan (biar tidak polos rata)
+      ox.save(); ox.filter='blur(28px) brightness(0.55)';
+      const coverScale=Math.max(FW/c.width,FH/c.height)*1.15;
+      const cw=c.width*coverScale, ch=c.height*coverScale;
+      ox.drawImage(c,(FW-cw)/2,(FH-ch)/2,cw,ch);
+      ox.restore();
+      ox.fillStyle='rgba(0,0,0,0.25)'; ox.fillRect(0,0,FW,FH);
+
+      // Hero asli digambar utuh (contain, tanpa terpotong) di tengah kanvas
+      const fitScale=Math.min(FW/c.width,FH/c.height)*0.94;
+      const dw=c.width*fitScale, dh=c.height*fitScale;
+      const dx=(FW-dw)/2, dy=(FH-dh)/2;
+      ox.save();
+      ox.shadowColor='rgba(0,0,0,0.55)'; ox.shadowBlur=40; ox.shadowOffsetY=14;
+      ox.drawImage(c,dx,dy,dw,dh);
+      ox.restore();
+
+      // Bingkai tipis warna gold/tema mengelilingi hero
+      const q=ox.createLinearGradient(dx,dy,dx+dw,dy+dh);
+      q.addColorStop(0,colG4);q.addColorStop(.5,colG2);q.addColorStop(1,colG1);
+      ox.strokeStyle=q; ox.lineWidth=5; ox.strokeRect(dx+2.5,dy+2.5,dw-5,dh-5);
+
+      const a=document.createElement('a');a.download='melisa-birthday.png';a.href=out.toDataURL();a.click();
       const t=document.getElementById('toast');t.textContent=window.t('toast.screenshotSaved');t.classList.add('show');
       setTimeout(()=>t.classList.remove('show'),2000)
     }catch(e){
