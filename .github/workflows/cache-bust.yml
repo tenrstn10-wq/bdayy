@@ -1,0 +1,37 @@
+name: Auto Cache-Bust
+
+# Jalan otomatis tiap kali ada push ke branch main.
+# Kalau branch utama repo lo namanya "master" bukan "main",
+# ganti "main" di baris "branches: [main]" di bawah jadi "master".
+on:
+  push:
+    branches: [main]
+
+# Wajib biar workflow ini boleh nge-commit balik ke repo.
+permissions:
+  contents: write
+
+jobs:
+  bust-cache:
+    # Guard biar gak infinite loop: commit otomatis dari workflow ini
+    # sendiri (yang ada tag [skip ci]) gak akan memicu jalan lagi.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ganti nomor versi jadi hash commit terbaru
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          sed -i -E "s/(style\.css\?v=)[A-Za-z0-9_-]+/\1${SHORT_SHA}/" index.html
+          sed -i -E "s/(script\.js\?v=)[A-Za-z0-9_-]+/\1${SHORT_SHA}/" index.html
+          echo "Versi baru: ${SHORT_SHA}"
+
+      - name: Commit perubahan
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: auto cache-bust [skip ci]"
+          file_pattern: index.html
